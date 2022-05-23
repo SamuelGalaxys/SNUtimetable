@@ -57,10 +57,7 @@ export async function addLecture(timetable: Timetable, lecture: UserLecture, isF
   if (isForced) {
     await TimetableRepository.deleteLectures(timetable._id, overlappingLectureIds);
   } else if (isOverlappingLecture(timetable, lecture)) {
-    const overlappingLectureTitles = overlappingLectures.map(lecture => lecture.course_title).slice(0,2).join(", ")
-    const shortFormOfTitles = overlappingLectures.length < 3 ? "" : `외 ${overlappingLectures.length - 2}개의 `
-    const confirmMessage = `${overlappingLectureTitles} ${shortFormOfTitles}강의가 중복되어 있습니다. 강의를 덮어쓰시겠습니까?`
-
+    const confirmMessage = makeOverwritingConfirmMessage(overlappingLectures)
     throw new LectureTimeOverlapError(confirmMessage);
   }
 
@@ -73,7 +70,7 @@ export async function addLecture(timetable: Timetable, lecture: UserLecture, isF
 
 
 
-export async function addCustomLecture(timetable: Timetable, lecture: UserLecture): Promise<void> {
+export async function addCustomLecture(timetable: Timetable, lecture: UserLecture, isForced: boolean): Promise<void> {
   /* If no time json is found, mask is invalid */
   LectureService.setTimemask(lecture);
   if (!lecture.course_title) throw new InvalidLectureUpdateRequestError(lecture);
@@ -84,9 +81,8 @@ export async function addCustomLecture(timetable: Timetable, lecture: UserLectur
     lecture.colorIndex = getAvailableColorIndex(timetable);
   }
 
-  await addLecture(timetable, lecture);
+  await addLecture(timetable, lecture, isForced);
 }
-
 
 export async function resetLecture(userId:string, tableId: string, lectureId: string): Promise<void> {
   let table: Timetable = await TimetableService.getByMongooseId(userId, tableId);
@@ -108,7 +104,7 @@ export async function resetLecture(userId:string, tableId: string, lectureId: st
   await TimetableRepository.updateUpdatedAt(tableId, Date.now());
 }
 
-export async function partialModifyUserLecture(userId: string, tableId: string, lecture: any): Promise<void> {
+export async function partialModifyUserLecture(userId: string, tableId: string, lecture: any, isForced: boolean): Promise<void> {
   let table = await TimetableRepository.findByUserIdAndMongooseId(userId, tableId);
 
   if (!table) {
@@ -124,16 +120,22 @@ export async function partialModifyUserLecture(userId: string, tableId: string, 
     lecture['class_time_mask'] = TimePlaceUtil.timeJsonToMask(lecture['class_time_json'], true);
   }
 
-  if (lecture['class_time_mask']) {
-    if (isOverlappingLecture(table, lecture)) {
-      throw new LectureTimeOverlapError()
-    }
-
-    validateLectureTime(table, lecture);
-  }
-
   if (lecture['color']) {
     LectureColorService.validateLectureColor(lecture);
+  }
+
+  if (lecture['class_time_mask']) {
+    validateLectureTime(table, lecture);
+
+    const overlappingLectures = getOverlappingLectures(table, lecture)
+    const overlappingLectureIds = overlappingLectures.map(lecture => lecture._id)
+
+    if (isForced) {
+      await TimetableRepository.deleteLectures(table._id, overlappingLectureIds);
+    } else if (isOverlappingLecture(table, lecture)) {
+      const confirmMessage = makeOverwritingConfirmMessage(overlappingLectures)
+      throw new LectureTimeOverlapError(confirmMessage);
+    }
   }
 
   lecture.updated_at = Date.now();
@@ -161,11 +163,17 @@ function isOverlappingLecture(table: Timetable, lecture: UserLecture): boolean {
   }
 }
 
+function makeOverwritingConfirmMessage(overlappingLectures: UserLecture[]) {
+  const overlappingLectureTitles = overlappingLectures.map(lecture => lecture.course_title).slice(0,2).join(", ")
+  const shortFormOfTitles = overlappingLectures.length < 3 ? "" : `외 ${overlappingLectures.length - 2}개의 `
+  return `${overlappingLectureTitles} ${shortFormOfTitles}강의가 중복되어 있습니다. 강의를 덮어쓰시겠습니까?`
+}
+
 function getOverlappingLectures(table: Timetable, lecture: UserLecture): UserLecture[] {
   let lectures: UserLecture[] = [];
-  for (var i=0; i<table.lecture_list.length; i++) {
-    var tableLecture:any = table.lecture_list[i];
-    for (var j=0; j<tableLecture.class_time_mask.length; j++) {
+  for (let i=0; i<table.lecture_list.length; i++) {
+    const tableLecture: any = table.lecture_list[i];
+    for (let j=0; j<tableLecture.class_time_mask.length; j++) {
       if ((tableLecture.class_time_mask[j] & lecture.class_time_mask[j]) != 0) {
         lectures.push(tableLecture);
         break;
