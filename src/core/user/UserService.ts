@@ -90,7 +90,7 @@ export async function sendVerificationCode(user: User, email: string): Promise<v
   await RedisUtil.setex(key, 180, JSON.stringify(value))
 }
 
-export async function verifyEmail(user: User, email: string, codeSubmitted: string): Promise<boolean> {
+export async function verifyEmail(user: User, codeSubmitted: string): Promise<boolean> {
   const key = `verification-code-${user._id}`
   const verificationValue: RedisVerificationValue = JSON.parse(await RedisUtil.get(key))
   if (verifyCode(verificationValue, codeSubmitted)) {

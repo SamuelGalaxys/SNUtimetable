@@ -41,7 +41,7 @@ restPost(router, '/email/verification')(async function (context, req) {
 
 restPost(router, '/email/verification/code')(async function (context, req) {
   const user: User = context.user;
-  const result = await verifyEmail(user, req.body.email, req.body.code)
+  const result = await verifyEmail(user, req.body.code)
   return {is_email_verified: result}
 })
 
