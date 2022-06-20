@@ -49,6 +49,7 @@ enum ErrorCode {
   USER_HAS_NO_FCM_KEY = 0x300E,
   INVALID_EMAIL = 0x300F,
   INPUT_OUT_OF_RANGE = 0x3010,
+  USER_EMAIL_IS_NOT_VERIFIED = 0x3011,
 
   /* 404 - Not found */
   TAG_NOT_FOUND = 0x4000,
@@ -60,6 +61,7 @@ enum ErrorCode {
 
   /* 409 - Conflict */
   USER_EMAIL_ALREADY_VERIFIED = 0x9000,
+  EMAIL_ALREADY_VERIFIED_BY_ANOTHER_USER = 0x9001,
 
   /* 429 - Too many requests */
   TOO_MANY_VERIFICATION_REQUEST = 0xA000,
