@@ -21,7 +21,11 @@ import Timetable from './model/Timetable';
 import TimePlace from './model/TimePlace';
 import InvalidLectureTimeJsonError from '../lecture/error/InvalidLectureTimeJsonError';
 import winston = require('winston');
+import {Time} from "@app/core/timetable/model/Time";
+import Lecture from "@app/core/lecture/model/Lecture";
 let logger = winston.loggers.get('default');
+
+const ZERO_PERIOD_START_HOUR = 8
 
 export async function addRefLecture(timetable: Timetable, lectureId: string, isForced: boolean): Promise<void> {
   let lecture = await RefLectureService.getByMongooseId(lectureId);
@@ -71,6 +75,9 @@ export async function addLecture(timetable: Timetable, lecture: UserLecture, isF
 
 
 export async function addCustomLecture(timetable: Timetable, lecture: UserLecture, isForced: boolean): Promise<void> {
+  if (isInvalidClassTime(lecture)) throw new InvalidLectureTimeJsonError()
+  syncRealTimeWithPeriod(lecture)
+
   /* If no time json is found, mask is invalid */
   LectureService.setTimemask(lecture);
   if (!lecture.course_title) throw new InvalidLectureUpdateRequestError(lecture);
@@ -116,6 +123,8 @@ export async function partialModifyUserLecture(userId: string, tableId: string, 
   }
 
   if (lecture['class_time_json']) {
+    if(isInvalidClassTime(lecture)) throw new InvalidLectureTimeJsonError()
+    syncRealTimeWithPeriod(lecture)
     LectureService.setTimemask(lecture);
     lecture['class_time_mask'] = TimePlaceUtil.timeJsonToMask(lecture['class_time_json'], true);
   }
@@ -237,6 +246,23 @@ export function getUserLectureFromTimetableByCourseNumber(table: Timetable, cour
     }
   }
   return null;
+}
+
+function syncRealTimeWithPeriod(lecture: any): void  {
+  lecture.class_time_json.forEach(it => {
+    it.start_time = it.start_time || new Time((it.start + 8) * 60).toHourMinuteFormat()
+    it.end_time = it.end_time || new Time((it.start + it.len + 8) * 60).toHourMinuteFormat()
+    const startTime = Time.fromHourMinuteString(it.start_time)
+    const endTime = Time.fromHourMinuteString(it.end_time)
+    it.len = it.len ? Number(it.len) : (endTime.subtract(startTime).getMinute() / 60)
+    it.start = it.start ? Number(it.start) : startTime.subtractHour(8).getDecimalHour()
+  })
+}
+
+function isInvalidClassTime(lecture: Lecture): boolean {
+  return lecture.class_time_json.some(
+    it => it.start_time == null && it.start == null || it.end_time == null && it.len == null
+  );
 }
 
 function isCustomLecture(lecture: UserLecture): boolean {
