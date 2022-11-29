@@ -179,17 +179,7 @@ function makeOverwritingConfirmMessage(overlappingLectures: UserLecture[]) {
 }
 
 function getOverlappingLectures(table: Timetable, lecture: UserLecture): UserLecture[] {
-  let lectures: UserLecture[] = [];
-  for (let i=0; i<table.lecture_list.length; i++) {
-    const tableLecture: any = table.lecture_list[i];
-    for (let j=0; j<tableLecture.class_time_mask.length; j++) {
-      if ((tableLecture.class_time_mask[j] & lecture.class_time_mask[j]) != 0) {
-        lectures.push(tableLecture);
-        break;
-      }
-    }
-  }
-  return lectures;
+  return table.lecture_list.filter(existingLecture => twoLecturesOverlap(existingLecture, lecture) )
 }
 
 function validateLectureTimeJson(timePlace: TimePlace): void {
@@ -246,6 +236,18 @@ export function getUserLectureFromTimetableByCourseNumber(table: Timetable, cour
     }
   }
   return null;
+}
+
+function twoLecturesOverlap(lectureA: Lecture, lectureB: Lecture): boolean {
+  return lectureA.class_time_json.some(classTimeA =>
+    lectureB.class_time_json.some(classTimeB => timesOverlap(classTimeA, classTimeB))
+  )
+}
+
+function timesOverlap(time1:TimePlace, time2: TimePlace): boolean {
+  return time1.day === time2.day
+    && (Time.fromHourMinuteString(time1.start_time).minute < Time.fromHourMinuteString(time2.end_time).minute)
+    && (Time.fromHourMinuteString(time1.end_time).minute > Time.fromHourMinuteString(time2.start_time).minute)
 }
 
 function syncRealTimeWithPeriod(lecture: any): void  {
