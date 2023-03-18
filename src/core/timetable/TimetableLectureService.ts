@@ -79,6 +79,9 @@ export async function addCustomLecture(timetable: Timetable, lecture: UserLectur
   if (isInvalidClassTime(lecture)) throw new InvalidLectureTimeJsonError()
   syncRealTimeWithPeriod(lecture)
 
+  // ios 3.1.3 UUID 넘겨주는 에러
+  lecture.lecture_id = null
+
   /* If no time json is found, mask is invalid */
   LectureService.setTimemask(lecture);
   if (!lecture.course_title) throw new InvalidLectureUpdateRequestError(lecture);
