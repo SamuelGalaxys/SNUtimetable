@@ -52,7 +52,7 @@ export async function addLecture(timetable: Timetable, lecture: UserLecture, isF
     }
   }
 
-  validateLectureTime(timetable, lecture);
+  validateLectureTime(lecture);
 
   LectureColorService.validateLectureColor(lecture)
 
@@ -82,8 +82,6 @@ export async function addCustomLecture(timetable: Timetable, lecture: UserLectur
   // ios 3.1.3 UUID 넘겨주는 에러 hotfix
   delete lecture.lecture_id
 
-  /* If no time json is found, mask is invalid */
-  LectureService.setTimemask(lecture);
   if (!lecture.course_title) throw new InvalidLectureUpdateRequestError(lecture);
 
   if (!isCustomLecture(lecture)) throw new NotCustomLectureError(lecture);
@@ -138,7 +136,7 @@ export async function partialModifyUserLecture(userId: string, tableId: string, 
   }
 
   if (lecture['class_time_mask']) {
-    validateLectureTime(table, lecture);
+    validateLectureTime(lecture);
 
     const overlappingLectures = getOverlappingLectures(table, lecture).filter(overlappingLecture => overlappingLecture._id != lecture._id)
     const overlappingLectureIds = overlappingLectures.map(eachLecture => eachLecture._id)
@@ -157,9 +155,13 @@ export async function partialModifyUserLecture(userId: string, tableId: string, 
   await TimetableRepository.updateUpdatedAt(table._id, Date.now());
 }
 
-function validateLectureTime(table: Timetable, lecture: UserLecture): void {
+function validateLectureTime(lecture: UserLecture): void {
   for (let i=0; i<lecture.class_time_json.length; i++) {
     validateLectureTimeJson(lecture.class_time_json[i]);
+    for (let j = i + 1; j < lecture.class_time_json.length; j++) {
+      if(timesOverlap(lecture.class_time_json[i], lecture.class_time_json[j]))
+        throw new LectureTimeOverlapError();
+    }
   }
 }
 
