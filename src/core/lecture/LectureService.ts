@@ -8,12 +8,6 @@ export function setTimemask(lecture: Lecture): void {
         lecture.class_time_mask = TimePlaceUtil.timeJsonToMask(lecture.class_time_json, true);
       } else {
         var timemask = TimePlaceUtil.timeJsonToMask(lecture.class_time_json);
-        for (var i=0; i<timemask.length; i++) {
-          if (timemask[i] != lecture.class_time_mask[i])
-            throw new InvalidLectureTimemaskError();
-        }
       }
-    } else if (lecture.class_time_mask) {
-        throw new InvalidLectureTimemaskError();
     }
 }

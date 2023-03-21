@@ -124,18 +124,13 @@ export async function partialModifyUserLecture(userId: string, tableId: string, 
     throw new InvalidLectureUpdateRequestError(lecture);
   }
 
+  if (lecture['color']) {
+    LectureColorService.validateLectureColor(lecture);
+  }
   if (lecture['class_time_json']) {
     if(isInvalidClassTime(lecture)) throw new InvalidLectureTimeJsonError()
     syncRealTimeWithPeriod(lecture)
     LectureService.setTimemask(lecture);
-    lecture['class_time_mask'] = TimePlaceUtil.timeJsonToMask(lecture['class_time_json'], true);
-  }
-
-  if (lecture['color']) {
-    LectureColorService.validateLectureColor(lecture);
-  }
-
-  if (lecture['class_time_mask']) {
     validateLectureTime(lecture);
 
     const overlappingLectures = getOverlappingLectures(table, lecture).filter(overlappingLecture => overlappingLecture._id != lecture._id)
