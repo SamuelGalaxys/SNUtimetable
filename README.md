@@ -2,6 +2,7 @@
 SNU Timetable API 서버
 
 서울대학교 수강편람 검색 및 시간표 관리를 위한 애플리케이션입니다.
+(Typescript)
 
 ## Related Repositories
 - [snutt-timetable](https://github.com/wafflestudio/snutt-timetable) : snutt 를 대체할 Spring WebFlux 시간표 서비스 서버 (migration 진행 중)
